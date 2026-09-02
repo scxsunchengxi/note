@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pad</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; }
+  textarea {
+    width: 100%; height: 100vh; border: none; outline: none; resize: none;
+    padding: 2rem; font-size: 1.1rem; line-height: 1.6; background: transparent;
+    color: #333; font-family: inherit;
+  }
+  .overlay {
+    position: fixed; inset: 0; background: #fafafa;
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;
+  }
+  .overlay input {
+    padding: 0.6rem 1rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px;
+    outline: none; width: 240px; font-family: inherit;
+  }
+  .overlay button {
+    padding: 0.6rem 1.5rem; font-size: 1rem; border: none; border-radius: 4px;
+    background: #333; color: #fff; cursor: pointer; font-family: inherit;
+  }
+  .overlay button:hover { background: #555; }
+  .err { color: #c00; font-size: 0.85rem; min-height: 1.2em; }
+  .saved { position: fixed; bottom: 1rem; right: 1rem; font-size: 0.8rem; color: #aaa; opacity: 0; transition: opacity 0.3s; }
+  .saved.show { opacity: 1; }
+</style>
+<body>
+
+<div class="overlay" id="lock">
+  <input id="pwd" type="password" placeholder="password" autofocus>
+  <button id="go">Unlock</button>
+  <div class="err" id="err"></div>
+</div>
+
+<textarea id="pad" placeholder="start typing..." style="display:none"></textarea>
+<div class="saved" id="msg">saved</div>
+
+<script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
+<script>
+  const ta = document.getElementById('pad');
+  const lock = document.getElementById('lock');
+  const pwd = document.getElementById('pwd');
+  const err = document.getElementById('err');
+  const msg = document.getElementById('msg');
+  let key = '';
+
+  document.getElementById('go').onclick = unlock;
+  pwd.onkeydown = e => { if (e.key === 'Enter') unlock(); };
+
+  function unlock() {
+    const pass = pwd.value;
+    if (!pass) return;
+    const stored = localStorage.getItem('pad');
+    if (stored) {
+      try {
+        const decrypted = CryptoJS.AES.decrypt(stored, pass).toString(CryptoJS.enc.Utf8);
+        if (!decrypted) throw 0;
+        ta.value = decrypted;
+      } catch {
+        err.textContent = 'wrong password';
+        pwd.value = '';
+        return;
+      }
+    }
+    key = pass;
+    lock.style.display = 'none';
+    ta.style.display = '';
+    ta.focus();
+  }
+
+  let timer;
+  ta.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const encrypted = CryptoJS.AES.encrypt(ta.value, key).toString();
+      localStorage.setItem('pad', encrypted);
+      msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 1000);
+    }, 500);
+  });
+</script>
+</body>
+</html>
